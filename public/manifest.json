@@ -1,0 +1,17 @@
+{
+  "name": "Roomie Grocery",
+  "short_name": "Roomie",
+  "description": "Shared grocery list for roommates",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f9fafb",
+  "theme_color": "#16a34a",
+  "icons": [
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
