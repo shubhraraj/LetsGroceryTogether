@@ -2,6 +2,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 import { GET, POST } from "@/app/api/items/route";
+import { PATCH } from "@/app/api/items/[id]/pickup/route";
 
 vi.mock("@/lib/prisma", () => ({
   prisma: {
@@ -89,5 +90,63 @@ describe("POST /api/items", () => {
     });
     const res = await POST(req);
     expect(res.status).toBe(201);
+  });
+});
+
+describe("PATCH /api/items/[id]/pickup", () => {
+  it("returns 404 when item not in household", async () => {
+    vi.mocked(prisma.item.findFirst).mockResolvedValue(null);
+    const req = withHH("http://localhost/api/items/i-bad/pickup", {
+      method: "PATCH",
+      body: JSON.stringify({ pickedUpByName: "Alex" }),
+    });
+    const res = await PATCH(req, { params: Promise.resolve({ id: "i-bad" }) });
+    expect(res.status).toBe(404);
+  });
+
+  it("marks item picked_up and creates suggestion", async () => {
+    vi.mocked(prisma.item.findFirst).mockResolvedValue({
+      id: "i1", householdId: HH, name: "Eggs", category: "Dairy",
+      status: "active", addedByName: "Alex", pickedUpByName: null,
+      pickedUpAt: null, createdAt: new Date(),
+      itemStores: [{ storeId: "s1" }],
+    });
+    vi.mocked(prisma.item.update).mockResolvedValue({} as any);
+    vi.mocked(prisma.suggestion.findUnique).mockResolvedValue(null);
+    vi.mocked(prisma.suggestion.create).mockResolvedValue({} as any);
+
+    const req = withHH("http://localhost/api/items/i1/pickup", {
+      method: "PATCH",
+      body: JSON.stringify({ pickedUpByName: "Alex" }),
+    });
+    const res = await PATCH(req, { params: Promise.resolve({ id: "i1" }) });
+    expect(res.status).toBe(200);
+    expect(prisma.suggestion.create).toHaveBeenCalledOnce();
+  });
+
+  it("updates existing suggestion on repeat pickup", async () => {
+    vi.mocked(prisma.item.findFirst).mockResolvedValue({
+      id: "i1", householdId: HH, name: "Eggs", category: "Dairy",
+      status: "active", addedByName: "Alex", pickedUpByName: null,
+      pickedUpAt: null, createdAt: new Date(),
+      itemStores: [],
+    });
+    vi.mocked(prisma.item.update).mockResolvedValue({} as any);
+    vi.mocked(prisma.suggestion.findUnique).mockResolvedValue({
+      id: "sg1", householdId: HH, itemName: "Eggs", category: "Dairy",
+      frequency: "weekly", nextSuggestAt: new Date("2026-05-20"),
+      lastPurchasedAt: new Date("2026-05-13"), purchaseCount: 1,
+      avgDaysBetweenPurchases: null, createdAt: new Date(),
+      suggestionStores: [],
+    });
+    vi.mocked(prisma.suggestion.update).mockResolvedValue({} as any);
+
+    const req = withHH("http://localhost/api/items/i1/pickup", {
+      method: "PATCH",
+      body: JSON.stringify({ pickedUpByName: "Alex" }),
+    });
+    const res = await PATCH(req, { params: Promise.resolve({ id: "i1" }) });
+    expect(res.status).toBe(200);
+    expect(prisma.suggestion.update).toHaveBeenCalledOnce();
   });
 });
