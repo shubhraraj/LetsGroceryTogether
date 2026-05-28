@@ -1,0 +1,92 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Household {
+  id          String   @id @default(uuid())
+  name        String
+  inviteCode  String   @unique @map("invite_code")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  stores      Store[]
+  items       Item[]
+  suggestions Suggestion[]
+
+  @@map("households")
+}
+
+model Store {
+  id          String   @id @default(uuid())
+  householdId String   @map("household_id")
+  name        String
+  emoji       String   @default("🛒")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  household        Household         @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  itemStores       ItemStore[]
+  suggestionStores SuggestionStore[]
+
+  @@map("stores")
+}
+
+model Item {
+  id             String    @id @default(uuid())
+  householdId    String    @map("household_id")
+  name           String
+  category       String
+  status         String    @default("active")
+  addedByName    String    @map("added_by_name")
+  pickedUpByName String?   @map("picked_up_by_name")
+  pickedUpAt     DateTime? @map("picked_up_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  household  Household   @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  itemStores ItemStore[]
+
+  @@map("items")
+}
+
+model ItemStore {
+  itemId  String @map("item_id")
+  storeId String @map("store_id")
+
+  item  Item  @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@id([itemId, storeId])
+  @@map("item_stores")
+}
+
+model Suggestion {
+  id                      String    @id @default(uuid())
+  householdId             String    @map("household_id")
+  itemName                String    @map("item_name")
+  category                String
+  frequency               String
+  nextSuggestAt           DateTime  @map("next_suggest_at")
+  lastPurchasedAt         DateTime? @map("last_purchased_at")
+  purchaseCount           Int       @default(1) @map("purchase_count")
+  avgDaysBetweenPurchases Float?    @map("avg_days_between_purchases")
+  createdAt               DateTime  @default(now()) @map("created_at")
+
+  household        Household         @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  suggestionStores SuggestionStore[]
+
+  @@unique([householdId, itemName])
+  @@map("suggestions")
+}
+
+model SuggestionStore {
+  suggestionId String @map("suggestion_id")
+  storeId      String @map("store_id")
+
+  suggestion Suggestion @relation(fields: [suggestionId], references: [id], onDelete: Cascade)
+  store      Store      @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@id([suggestionId, storeId])
+  @@map("suggestion_stores")
+}
