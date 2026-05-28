@@ -9,6 +9,7 @@ vi.mock("@/lib/prisma", () => ({
     suggestion: {
       findMany: vi.fn(),
       findFirst: vi.fn(),
+      update: vi.fn(),
     },
     item: {
       create: vi.fn(),
@@ -70,6 +71,7 @@ describe("POST /api/suggestions/[id]/add", () => {
       pickedUpAt: null, createdAt: new Date(),
       itemStores: [{ storeId: "s1" }],
     });
+    vi.mocked(prisma.suggestion.update).mockResolvedValue({} as never);
     const req = withHH("http://localhost/api/suggestions/sg1/add", {
       method: "POST",
       body: JSON.stringify({ addedByName: "Alex" }),

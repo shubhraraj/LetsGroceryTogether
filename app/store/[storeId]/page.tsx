@@ -3,6 +3,7 @@
 import { useRouter, useParams } from "next/navigation";
 import { useStores } from "@/hooks/use-stores";
 import { useItems, itemsForStore } from "@/hooks/use-items";
+import { useSuggestions } from "@/hooks/use-suggestions";
 import { ProgressHeader } from "@/components/progress-header";
 import { ItemRow } from "@/components/item-row";
 import { InlineAddRow } from "@/components/inline-add-row";
@@ -14,6 +15,7 @@ export default function StoreListPage() {
   const { storeId } = useParams<{ storeId: string }>();
   const { stores } = useStores();
   const { items, mutate } = useItems();
+  const { mutate: mutateSuggestions } = useSuggestions();
 
   const store = stores.find((s) => s.id === storeId);
   const storeItems = itemsForStore(items, storeId);
@@ -29,11 +31,15 @@ export default function StoreListPage() {
         ),
       false
     );
-    await apiFetch(`/api/items/${itemId}/pickup`, {
-      method: "PATCH",
-      body: JSON.stringify({ pickedUpByName: getDisplayName() }),
-    });
-    mutate();
+    try {
+      await apiFetch(`/api/items/${itemId}/pickup`, {
+        method: "PATCH",
+        body: JSON.stringify({ pickedUpByName: getDisplayName() }),
+      });
+    } finally {
+      mutate();
+      mutateSuggestions();
+    }
   }
 
   if (!store) {

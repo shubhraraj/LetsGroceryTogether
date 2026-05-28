@@ -2,6 +2,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getHouseholdIdHeader, missingHouseholdResponse } from "@/lib/api-helpers";
+import { getFrequencyForCategory } from "@/lib/category-detector";
+import { computeNextSuggestAt } from "@/lib/suggestion-engine";
 
 export async function POST(
   req: NextRequest,
@@ -33,5 +35,14 @@ export async function POST(
     },
     include: { itemStores: { select: { storeId: true } } },
   });
+
+  // Advance nextSuggestAt so the suggestion doesn't immediately reappear
+  const days = suggestion.avgDaysBetweenPurchases
+    ?? getFrequencyForCategory(suggestion.category).days;
+  await prisma.suggestion.update({
+    where: { id: suggestion.id },
+    data: { nextSuggestAt: computeNextSuggestAt(new Date(), days) },
+  });
+
   return NextResponse.json(item, { status: 201 });
 }
