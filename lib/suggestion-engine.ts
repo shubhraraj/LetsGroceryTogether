@@ -6,6 +6,7 @@ const FREQUENCY_DAYS: Record<string, number> = {
 };
 
 export function computeNextSuggestAt(lastPickedUpAt: Date, avgDays: number): Date {
+  if (avgDays <= 0) return new Date(lastPickedUpAt);
   const next = new Date(lastPickedUpAt);
   next.setDate(next.getDate() + Math.round(avgDays));
   return next;
@@ -19,7 +20,7 @@ export function computeNewAvgDays(
 ): number {
   const interval =
     (newPickupAt.getTime() - lastPurchasedAt.getTime()) / (1000 * 60 * 60 * 24);
-  if (currentAvg === null) return interval;
+  if (currentAvg === null) return interval; // first purchase: interval is the average
   return (currentAvg * (newPurchaseCount - 1) + interval) / newPurchaseCount;
 }
 
